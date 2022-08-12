@@ -158,6 +158,14 @@ const serverActionsPlugin = (app: FastifyInstance, opts: FastifyPluginOptions, d
 
     if (isRunning) return sendError(rep, APIError.INVALID_REQUEST, 'server is still on');
 
+    await prisma.serverInvitation.deleteMany({
+      where: {
+        server: {
+          uid: uuid,
+        },
+      },
+    });
+
     await prisma.server.deleteMany({
       where: {
         uid: uuid,
