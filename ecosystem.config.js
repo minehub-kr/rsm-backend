@@ -28,7 +28,7 @@ module.exports = {
       ref: 'origin/main',
       repo: 'git@github.com:minehub-kr/rsm-backend.git',
       path: process.env.DEPLOY_PRODUCTION_PATH,
-      'pre-deploy-local': `scp -Cr ./.env ${process.env.DEPLOY_PRODUCTION_USER}@${process.env.DEPLOY_PRODUCTION_HOST}:${process.env.DEPLOY_PRODUCTION_PATH}/current`,
+      'pre-deploy-local': `scp -Cr ./.env ${process.env.DEPLOY_PRODUCTION_USER}@${process.env.DEPLOY_PRODUCTION_HOST}:${process.env.DEPLOY_PRODUCTION_PATH}/current; scp -Cr ./config.json ${process.env.DEPLOY_PRODUCTION_USER}@${process.env.DEPLOY_PRODUCTION_HOST}:${process.env.DEPLOY_PRODUCTION_PATH}/current`,
       'post-deploy': `yarn && yarn prisma generate && yarn build && pm2 startOrRestart ecosystem.config.js`,
     },
   },
