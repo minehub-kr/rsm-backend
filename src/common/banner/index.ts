@@ -10,9 +10,7 @@ export function showBanner(): void {
   console.log(`${chalk.bold(title)} - ${chalk.italic(`ver. ${packageJson.version}`)}`);
   console.log(chalk.cyan(chalk.underline(packageJson.repository)));
   console.log();
-  console.log(
-    `Copyright © ${chalk.greenBright(chalk.bold('Minehub'))} ${chalk.cyanBright('OpenRSM Team')}`,
-  );
+  console.log(`Copyright © ${chalk.greenBright(chalk.bold('Minehub'))} ${chalk.cyanBright('OpenRSM Team')}`);
   console.log();
 }
 
