@@ -1,0 +1,59 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["filterJson"]
+}
+
+model User {
+  sub String @id
+
+  id_token Json?
+
+  firstJoin      DateTime @default(now())
+  lastAuthorized DateTime @default(now())
+
+  ownedServers Server[]
+
+  isAdmin      Boolean @default(false)
+  isBanned     Boolean @default(false)
+
+  createdServerInvitations ServerInvitation[]
+
+  domainLimit  Int     @default(3)
+  cloudLimit   Int     @default(1)
+}
+
+model Server {
+  uid String @id @default(uuid())
+
+  name     String
+  owners   User[]
+  metadata Json?
+
+  invitations ServerInvitation[]
+
+  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+}
+
+model ServerInvitation {
+  token String @id
+
+  server Server @relation(fields: [serverUid], references: [uid])
+  serverUid String
+
+  createdBy User @relation(fields: [createdBySub], references: [sub])
+  createdBySub String
+
+  usedAt DateTime?
+
+  issuedAt DateTime @default(now())
+  expiresAt DateTime @default(now())
+}

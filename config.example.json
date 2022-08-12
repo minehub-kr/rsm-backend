@@ -1,0 +1,27 @@
+{
+  "oauth2": {
+    "userinfo": "https://meiling.stella-api.dev/v1/oauth2/userinfo",
+    "tokeninfo": "https://meiling.stella-api.dev/v1/oauth2/tokeninfo",
+    "permissions": {
+      "required": [
+        "openid",
+        "name",
+        "https://api.minehub.kr"
+      ]
+    }
+  },
+  "fastify": {
+    "listen": 8080,
+    "proxy": {
+      "allowedHosts": []
+    },
+    "unixSocket": {
+      "chmod": "0777"
+    }
+  },
+  "admin": {
+    "tokens": [
+      "==[EXAMPLE_ADMIN_TOKENS]=="
+    ]
+  }
+}

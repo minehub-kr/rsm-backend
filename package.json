@@ -1,0 +1,66 @@
+{
+  "name": "rsm-backend",
+  "version": "0.0.1",
+  "description": "Minehub RSM Backend API",
+  "main": "dist/",
+  "repository": "https://github.com/minehub-kr/rsm-backend",
+  "author": "Alex4386 <psh010209@gmail.com>",
+  "private": true,
+  "banner": {
+    "title": "MinehubRSM"
+  },
+  "dependencies": {
+    "@prisma/client": "^3.9.1",
+    "axios": "^0.21.1",
+    "dotenv": "^10.0.0",
+    "fastify": "^3.11.0",
+    "fastify-cors": "^5.2.0",
+    "figlet": "^1.5.0",
+    "node-cron": "^3.0.0",
+    "pino-pretty": "^4.5.0",
+    "typescript": "^4.0.5",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "@types/figlet": "^1.2.1",
+    "@types/node": "^14.14.7",
+    "@types/node-cron": "^3.0.1",
+    "@types/uuid": "^8.3.4",
+    "@types/ws": "^8.2.2",
+    "@typescript-eslint/eslint-plugin": "^4.7.0",
+    "@typescript-eslint/parser": "^4.7.0",
+    "eslint": "^7.13.0",
+    "eslint-config-prettier": "^6.15.0",
+    "eslint-plugin-prettier": "^3.1.4",
+    "fastify-websocket": "^3.1.0",
+    "husky": "^4.3.0",
+    "lint-staged": "^10.5.1",
+    "nodemon": "^2.0.7",
+    "prettier": "^2.1.2",
+    "prisma": "^3.9.1",
+    "ts-node": "^9.0.0"
+  },
+  "scripts": {
+    "debug": "ts-node ./src/",
+    "build": "tsc",
+    "start:dev": "nodemon",
+    "start": "tsc && NODE_ENV=production node ./dist/",
+    "lint": "eslint '*/**/*.{js,ts,tsx}' --quiet --fix",
+    "studio": "prisma studio",
+    "migrate:deploy": "prisma migrate deploy --preview-feature",
+    "migrate:dev": "prisma migrate dev --preview-feature",
+    "migrate:reset": "prisma migrate reset --preview-feature",
+    "migrate:redeploy": "prisma migrate reset --preview-feature; rm -rf ./prisma/migrations/; prisma migrate dev --preview-feature",
+    "generate": "prisma generate"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx}": [
+      "eslint --fix"
+    ]
+  }
+}
