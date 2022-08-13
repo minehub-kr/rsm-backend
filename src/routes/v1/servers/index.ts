@@ -7,7 +7,8 @@ import { getServerInfo } from '../../../common/server';
 import serverQueryActionsPlugin from './actions';
 import invitationsHandler from './invitations';
 import serverWebsocketPlugin from './ws';
-import { isServerOnline, runPacket } from './ws/handler';
+import { runPacket } from './ws/handler';
+import { isServerOnline } from './ws/process';
 
 interface ServerCreateBody {
   name?: string;

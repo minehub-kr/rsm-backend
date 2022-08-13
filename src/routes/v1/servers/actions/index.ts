@@ -4,7 +4,8 @@ import { FastifyRequestWithUser } from '../..';
 import { prisma } from '../../../..';
 import { APIError, API_SERVER_FROM, sendError } from '../../../../common/error';
 import { MCSVClientV1Actions } from '../ws/actions';
-import { isServerOnline, runPacket, runPayload } from '../ws/handler';
+import { runPacket, runPayload } from '../ws/handler';
+import { isServerOnline } from '../ws/process';
 
 interface FastifyWebsocketCommandRequestWithServer extends FastifyRequestWithUser {
   server: MCSVServer;

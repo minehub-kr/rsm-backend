@@ -5,10 +5,28 @@ import { WSSessionType, SessionData, housekeepWSSessions, getWSSessions, getWSSe
 import { v4 as uuidv4 } from 'uuid';
 import * as WebSocket from 'ws';
 import { FastifyRequest } from 'fastify';
+import { broadcastToAudit } from '../../../../common/server';
+import { processBackendPayload } from './process';
+import { checkSafeToSend, WSPayload } from './common';
 
-interface WSPayload {
-  action: string;
-  data: any;
+function broadcastPacket(server: MCSVServer | string, packet: any, skipBroadcast?: true) {
+  getWSSessions(server, WSSessionType.CLIENT).map((n) => {
+    if (checkSafeToSend(n.conn)) {
+      n.conn.socket.send(JSON.stringify(packet));
+    }
+  });
+
+  if (!skipBroadcast) broadcastToAudit(server, 'broadcast', packet);
+}
+
+function sendPacket2Server(server: MCSVServer | string, packet: any, skipBroadcast?: true) {
+  getWSSessions(server, WSSessionType.SERVER).map((n) => {
+    if (checkSafeToSend(n.conn)) {
+      n.conn.socket.send(JSON.stringify(packet));
+    }
+  });
+
+  if (!skipBroadcast) broadcastToAudit(server, 'p2p', packet);
 }
 
 export function notifyUsers(server: MCSVServer | string, type: 'join' | 'leave') {
@@ -20,17 +38,11 @@ export function notifyUsers(server: MCSVServer | string, type: 'join' | 'leave')
     throw new Error('INVALID TYPE (' + type + ')');
   }
 
-  getWSSessions(server, WSSessionType.CLIENT).map((n) => {
-    if (checkSafeToSend(n.conn)) {
-      n.conn.socket.send(
-        JSON.stringify({
-          from: API_SERVER_FROM,
-          payload: {
-            action,
-          },
-        }),
-      );
-    }
+  broadcastPacket(server, {
+    from: API_SERVER_FROM,
+    payload: {
+      action,
+    },
   });
 }
 
@@ -65,31 +77,28 @@ export function registerHandler(server: MCSVServer | string, type: WSSessionType
         return sendWSError(conn, WSAPIError.MALFORMED_JSON);
       }
 
-      // if it is for api_server, mcsv-api. then process it.
-      // else it is going to server (default).
-      if (json.to === API_SERVER_FROM) {
-        return processWSPayload(server, WSSessionType.CLIENT, sess.id, json.payload);
-      }
-
       // if payload does not exist, There is nothing to pass to server. return error.
       if (!json.payload) {
         return sendWSError(conn, WSAPIError.MISSING_PAYLOAD);
       }
 
+      // if it is for api_server, mcsv-api. then process it.
+      // else it is going to server (default).
+      if (json.to === API_SERVER_FROM) {
+        return processBackendPayload(server, WSSessionType.CLIENT, sess.id, json.payload);
+      }
+
       // relay the payload to all the servers.
       // (it must be one, but playing safe just in case.)
-      const serverSessions = getWSSessions(server, WSSessionType.SERVER);
-      serverSessions.map((n) => {
-        if (checkSafeToSend(n.conn)) {
-          n.conn.socket.send(
-            JSON.stringify({
-              from: id,
-              to: json.to ?? 'server',
-              payload: json.payload as WSPayload,
-            }),
-          );
-        }
-      });
+      sendPacket2Server(
+        server,
+        {
+          from: id,
+          to: json.to ?? 'server',
+          payload: json.payload as WSPayload,
+        },
+        true,
+      );
     });
   } else if (type === WSSessionType.SERVER) {
     conn.socket.on('message', (rawMsg) => {
@@ -115,6 +124,7 @@ export function registerHandler(server: MCSVServer | string, type: WSSessionType
       // server payloads can have multiple targets.
       const targets: SessionData[] = [];
       let isItForAPI = false;
+      let auditPacketType = 'p2p';
 
       // check if destination is specified, else it is broadcast packet.
       if (json.to) {
@@ -139,30 +149,43 @@ export function registerHandler(server: MCSVServer | string, type: WSSessionType
           }
         }
       } else {
+        auditPacketType = 'broadcast';
         targets.push(...(getWSSessions(server, WSSessionType.CLIENT).filter((n) => n !== undefined) as SessionData[]));
       }
 
       const payload = json.payload as WSPayload;
       if (isItForAPI) {
-        processWSPayload(server, WSSessionType.SERVER, sess.id, payload);
+        processBackendPayload(server, WSSessionType.SERVER, sess.id, payload);
       }
 
       if (targets.length === 0) return;
 
+      const baseResult = {
+        from: 'server',
+        to: json.to,
+        payload,
+        exception: json?.exception,
+        error: json?.error,
+      };
+
       targets.map((n) => {
         if (checkSafeToSend(n.conn)) {
           console.log('sending payload to: ' + n.id);
-          n.conn.socket.send(
-            JSON.stringify({
-              from: 'server',
-              to: json.to,
-              payload,
-              exception: json?.exception,
-              error: json?.error,
-            }),
-          );
+          const result = {
+            ...baseResult,
+          };
+
+          broadcastToAudit(server, 'p2p', result);
+
+          n.conn.socket.send(JSON.stringify(result));
         }
       });
+
+      if (auditPacketType === 'broadcast') {
+        broadcastToAudit(server, 'broadcast', {
+          ...baseResult,
+        });
+      }
     });
   } else {
     throw new Error('invalid sessionType');
@@ -258,79 +281,16 @@ export function runPacket(
     (sessions[uid] as any)[WSSessionType.CLIENT].push(sessionData);
 
     if (packet.to === 'server' || packet.to === undefined) {
-      const serverSessions = getWSSessions(server, WSSessionType.SERVER);
-      serverSessions.map((n) => {
-        if (checkSafeToSend(n.conn)) {
-          n.conn.socket.send(
-            JSON.stringify({
-              ...packet,
-              from,
-            }),
-          );
-        }
+      sendPacket2Server(server, {
+        ...packet,
+        from,
       });
     }
 
     if (packet.to === API_SERVER_FROM || packet.to === undefined) {
       if (packet.payload) {
-        processWSPayload(server, WSSessionType.CLIENT, from, packet.payload);
+        processBackendPayload(server, WSSessionType.CLIENT, from, packet.payload);
       }
     }
   });
-}
-
-export function checkSafeToSend(conn: SocketStream) {
-  return conn && !conn.destroyed && conn.socket.readyState === conn.socket.OPEN;
-}
-
-export function isServerOnline(server: string | MCSVServer) {
-  housekeepWSSessions(server, WSSessionType.SERVER);
-  const sessions = getWSSessions(server, WSSessionType.SERVER);
-
-  return sessions.length > 0;
-}
-
-function processWSPayload(server: string | MCSVServer, type: WSSessionType, from: string, payload: WSPayload): void {
-  const responseTarget = getWSSessionById(server, from, type);
-  if (!responseTarget) return;
-
-  const conn = responseTarget.conn;
-
-  let responsePayload = {};
-  if (!payload.action) return sendWSError(conn, WSAPIError.INVALID_PAYLOAD);
-
-  if (payload.action === 'ping') {
-    responsePayload = {
-      action: payload.action,
-      response: 'pong',
-    };
-  } else if (payload.action === 'get_my_id') {
-    responsePayload = {
-      action: payload.action,
-      response: responseTarget.id,
-    };
-  } else if (payload.action === 'is_server_online') {
-    responsePayload = {
-      action: payload.action,
-      response: isServerOnline(server),
-    };
-  } else if (payload.action === 'get_server_ip') {
-    if (isServerOnline(server)) {
-      const serverSession = getWSSessions(server, WSSessionType.SERVER)[0];
-      responsePayload = {
-        action: payload.action,
-        response: serverSession.ip,
-      };
-    }
-  }
-
-  if (checkSafeToSend(conn)) {
-    conn.socket.send(
-      JSON.stringify({
-        from: API_SERVER_FROM,
-        to: responseTarget.id,
-        payload: responsePayload,
-      }),
-    );
-  }
 }

@@ -2,7 +2,8 @@ import { Server as MCSVServer } from '@prisma/client';
 import { FastifyRequest } from 'fastify';
 import { SocketStream } from 'fastify-websocket';
 import { v4 as uuidv4 } from 'uuid';
-import { registerHandler, checkSafeToSend } from './handler';
+import { checkSafeToSend } from './common';
+import { registerHandler } from './handler';
 
 export enum WSSessionType {
   SERVER = 'server',

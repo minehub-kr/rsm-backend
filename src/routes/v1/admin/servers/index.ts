@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { prisma } from '../../../..';
 import { sendError, APIError } from '../../../../common/error';
+import { registerAuditWebsocket } from '../../../../common/server';
 
 const adminServersPlugin = (app: FastifyInstance, _opts: FastifyPluginOptions, done: () => void): void => {
   app.get('/', async (req, rep) => {
@@ -21,6 +22,17 @@ const adminServersPlugin = (app: FastifyInstance, _opts: FastifyPluginOptions, d
     });
 
     rep.send(servers);
+  });
+
+  app.get('/audit', { websocket: true }, async (conn, req) => {
+    registerAuditWebsocket(conn);
+
+    conn.socket.send(
+      JSON.stringify({
+        hello: 'world',
+        minehub_rms: 'audit_endpoint',
+      }),
+    );
   });
 
   app.register(adminServerPlugin, { prefix: '/:serverId' });
