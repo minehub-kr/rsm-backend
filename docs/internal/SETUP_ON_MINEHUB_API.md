@@ -25,6 +25,13 @@ server {
     include conf/ws-proxy.conf;
   }
 
+  location ~ ^/v1/admin/servers/audit {
+    include conf/stackpath.conf;
+    proxy_pass http://minehub_rsm_socket;
+    include conf/proxy.conf;
+    include conf/ws-proxy.conf;
+  }
+
   location ~ ^/v1/(admin/|)servers(.+|$) {
     include conf/stackpath.conf;
     proxy_pass http://minehub_rsm_socket;
