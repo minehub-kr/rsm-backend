@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyPluginOptions } from 'fastify';
 import { prisma } from '../../../..';
 import { sendError, APIError } from '../../../../common/error';
 import { registerAuditWebsocket } from '../../../../common/server';
+import { isServerOnline } from '../../servers/ws/process';
 
 const adminServersPlugin = (app: FastifyInstance, _opts: FastifyPluginOptions, done: () => void): void => {
   app.get('/', async (req, rep) => {
@@ -21,7 +22,10 @@ const adminServersPlugin = (app: FastifyInstance, _opts: FastifyPluginOptions, d
       where: prismaQuery,
     });
 
-    rep.send(servers);
+    rep.send(servers.map(n => ({
+      ...n,
+      online: isServerOnline(n),
+    })));
   });
 
   app.get('/audit', { websocket: true }, async (conn, req) => {
