@@ -40,6 +40,8 @@ export function registerAuditWebsocket(conn: SocketStream) {
   conn.socket.on('close', () => {
     housekeepAuditWebsocket();
   });
+
+  auditWebsocketConn.push(conn);
 }
 
 export function broadcastToAudit(server: Server | string, type: string, packet: any) {
