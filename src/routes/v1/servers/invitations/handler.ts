@@ -26,6 +26,11 @@ const invitationHandler = (app: FastifyInstance, opts: FastifyPluginOptions, don
       throw new Error('not_found');
     }
 
+    if (!req.user) {
+      sendError(rep, APIError.INVALID_REQUEST);
+      throw new Error('invalid_request');
+    }
+
     const isCreator = req.user.sub === invitation.createdBySub || req.isAdmin;
 
     if (invitation.expiresAt && !isCreator) {

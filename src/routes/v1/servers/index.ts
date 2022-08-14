@@ -19,13 +19,16 @@ const serversPlugin = (app: FastifyInstance, _opts: FastifyPluginOptions, done: 
     const req = _req as FastifyRequestWithUser;
 
     const user = req.user;
+
     const servers = await prisma.server.findMany({
       where: {
-        owners: {
-          some: {
-            sub: user.sub,
+        ...(user ? {
+          owners: {
+            some: {
+              sub: user.sub,
+            },
           },
-        },
+        } : {})
       },
     });
 
@@ -37,6 +40,11 @@ const serversPlugin = (app: FastifyInstance, _opts: FastifyPluginOptions, done: 
     const body = req.body as ServerCreateBody;
 
     const user = req.user;
+
+    if (!user) {
+      sendError(rep, APIError.INVALID_REQUEST);
+      return;
+    }
 
     if (!body) {
       sendError(rep, APIError.INVALID_REQUEST);
@@ -79,7 +87,7 @@ const serverActionsPlugin = (app: FastifyInstance, opts: FastifyPluginOptions, d
     const req = _req as FastifyRequestWithUser;
     const uuid = (req.params as { uuid: string }).uuid;
 
-    const sub = req.user.sub;
+    const sub = req.user ? req.user.sub : '';
 
     const server = await prisma.server.findFirst({
       where: {

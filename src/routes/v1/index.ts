@@ -36,29 +36,35 @@ const v1LoginRequiredHandler = (app: FastifyInstance, opts: FastifyPluginOptions
       throw new Error();
     }
 
-    const data = await Meiling.getToken(token.token);
-    if (!data) {
-      sendError(rep, APIError.INVALID_TOKEN, 'token is invalid');
-      throw new Error();
+
+    if (!config.admin.tokens.includes(token.token)) {
+      const data = await Meiling.getToken(token.token);
+      if (!data) {
+        sendError(rep, APIError.INVALID_TOKEN, 'token is invalid');
+        throw new Error();
+      }
+
+      const permCheck = await Meiling.permCheck(token.token, config.oauth2.permissions.required);
+      if (!permCheck) {
+        sendError(rep, APIError.INSUFFICIENT_PERMISSION, 'token does not meet with minimum sufficient permission');
+        throw new Error();
+      }
+
+      const user = await Meiling.getUser(token.token);
+      if (!user) {
+        sendError(rep, APIError.USER_NOT_FOUND, 'unable to load user inforamtion');
+        throw new Error();
+      }
+
+      (req as FastifyRequestWithUser).user = user;
+      (req as FastifyRequestWithUser).isAdmin = await User.checkIsAdmin(user);
+
+      await User.createUserIfNotExist(user);
+      await User.updateLastAuthorized(user);
+    } else {
+      (req as FastifyRequestWithUser).user = null as unknown as MeilingV1OAuthOpenIDData;
+      (req as FastifyRequestWithUser).isAdmin = true;
     }
-
-    const permCheck = await Meiling.permCheck(token.token, config.oauth2.permissions.required);
-    if (!permCheck) {
-      sendError(rep, APIError.INSUFFICIENT_PERMISSION, 'token does not meet with minimum sufficient permission');
-      throw new Error();
-    }
-
-    const user = await Meiling.getUser(token.token);
-    if (!user) {
-      sendError(rep, APIError.USER_NOT_FOUND, 'unable to load user inforamtion');
-      throw new Error();
-    }
-
-    (req as FastifyRequestWithUser).user = user;
-    (req as FastifyRequestWithUser).isAdmin = await User.checkIsAdmin(user);
-
-    await User.createUserIfNotExist(user);
-    await User.updateLastAuthorized(user);
   });
 
   app.register(serversPlugin, { prefix: '/servers' });
