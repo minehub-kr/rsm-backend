@@ -44,9 +44,9 @@
   },
   "scripts": {
     "debug": "ts-node ./src/",
-    "build": "swc src --out-dir dist/ --sync",
+    "build": "swc src --out-dir dist/ --sync --strip-leading-paths",
     "start:dev": "nodemon",
-    "start": "swc src --out-dir dist/ --sync && NODE_ENV=production node ./dist/",
+    "start": "swc src --out-dir dist/ --sync --strip-leading-paths && NODE_ENV=production node ./dist/",
     "lint": "eslint '*/**/*.{js,ts,tsx}' --quiet --fix",
     "studio": "prisma studio",
     "migrate:deploy": "prisma migrate deploy --preview-feature",
