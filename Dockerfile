@@ -7,6 +7,6 @@ COPY . .
 
 RUN yarn --production=false
 RUN yarn build
-RUN generate
+RUN yarn generate
 
 CMD ["node", "./dist/"]
