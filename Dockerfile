@@ -5,7 +5,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN yarn
-RUN yarn build --production=false
+RUN yarn --production=false
+RUN yarn build
 
 CMD ["node", "./dist/"]
